@@ -4,6 +4,7 @@ require_relative 'lib/database_connection'
 require_relative 'lib/maker_repository'
 require_relative 'lib/peep_repository'
 require_relative 'lib/helper_methods'
+require_relative 'lib/mentions'
 
 DatabaseConnection.connect
 
@@ -53,7 +54,12 @@ class Application < Sinatra::Base
     @peep.maker_id = session[:maker_id]
     repo = PeepRepository.new
     repo.create(@peep)
-
+    
+    mentions = Mentions.new
+    
+    @mention = mentions.find(@peep)
+    mentions.send_notification(@peep) if @mention
+    
     return erb(:peep_confirmation)
   end
   
