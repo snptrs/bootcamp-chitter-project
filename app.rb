@@ -3,11 +3,14 @@ require 'sinatra/reloader'
 require_relative 'lib/database_connection'
 require_relative 'lib/maker_repository'
 require_relative 'lib/peep_repository'
+require_relative 'lib/helper_methods'
 
 DatabaseConnection.connect
 
 class Application < Sinatra::Base
   enable :sessions
+  
+  helper = HelperMethods.new
   
   configure :development do
     register Sinatra::Reloader
@@ -39,7 +42,8 @@ class Application < Sinatra::Base
   end
   
   post '/peep' do
-    if params[:content].empty?
+    # binding.irb
+    if helper.check_empty(params[:content]) == false
       @error_message = "You can't Peep nothing, can you? Have another go."
       return erb(:error)
     end
@@ -63,7 +67,8 @@ class Application < Sinatra::Base
   
   post '/maker/login' do
     maker = MakerRepository.new.find_by_email(params[:email])
-    if maker == nil || params[:email].empty? || params[:password].empty?
+    
+    if helper.check_empty(maker, params[:email], params[:password]) == false
       @error_message = "That email address wasn't found."
       status 401
       return erb(:error)
@@ -87,15 +92,12 @@ class Application < Sinatra::Base
   end
   
   post '/maker' do
-    if params[:name].empty? || params[:email].empty? || params[:password].empty?
+    if helper.check_empty(params[:name], params[:email], params[:password]) == false
       @error_message = "Something wasn't right with your registration. Give it another go."
       return erb(:error)
     end
     
-    @maker = Maker.new
-    @maker.name = params['name']
-    @maker.email = params['email']
-    @maker.password = BCrypt::Password.create(params['password'])
+    @maker = helper.create_maker(params['name'], params['email'], BCrypt::Password.create(params['password']))
     
     repo = MakerRepository.new
     repo.create(@maker)
